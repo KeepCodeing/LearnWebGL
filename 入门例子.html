@@ -1,0 +1,128 @@
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <style>
+      * {
+        padding: 0;
+        margin: 0;
+      }
+      #canvas {
+        background-color: red;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="canvas"></canvas>
+
+    <script>
+      const canvas = document.querySelector("#canvas");
+      const body = document.querySelector("body");
+
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+
+      const gl = canvas.getContext("webgl");
+
+      gl.clearColor(0, 0, 0, 1);
+      gl.clear(gl.COLOR_BUFFER_BIT);
+
+      const vsSource = `
+        attribute vec4 dotPos;
+        void main() {
+          gl_Position = dotPos;
+          gl_PointSize = 40.0;
+        }
+      `;
+
+      const fsSource = `
+        precision mediump float;
+        uniform vec4 color;
+        void main() {
+          float dist = distance(gl_PointCoord, vec2(0.5, 0.5));
+          if (dist < 0.5) {
+            gl_FragColor = color;
+          } else {
+            discard;
+          }
+        }
+      `;
+
+      function loadShader(gl, type, source) {
+        const shader = gl.createShader(type);
+
+        gl.shaderSource(shader, source);
+
+        gl.compileShader(shader);
+
+        return shader;
+      }
+
+      function initShader(gl, vsSource, fsSource) {
+        const program = gl.createProgram();
+
+        gl.attachShader(program, loadShader(gl, gl.VERTEX_SHADER, vsSource));
+        gl.attachShader(program, loadShader(gl, gl.FRAGMENT_SHADER, fsSource));
+        gl.linkProgram(program);
+        gl.useProgram(program);
+
+        gl.program = program;
+      }
+
+      initShader(gl, vsSource, fsSource);
+
+      function setAttribute(gl, key, x, y, z) {
+        const val = gl.getAttribLocation(gl.program, key);
+        gl.vertexAttrib3f(val, x, y, z);
+      }
+
+      function setColor(gl, key, r, g, b, a) {
+        const val = gl.getUniformLocation(gl.program, key);
+        gl.uniform4f(val, r, g, b, a);
+      }
+
+      setAttribute(gl, "dotPos", 0.5, -0.5, 0);
+      setColor(gl, "color", 1, 1, 1, 1);
+
+      function render(x, y) {
+        const points = [];
+
+        const _render = (x, y) => {
+          points.push({ x, y });
+
+          gl.clearColor(0, 0, 0, 1);
+          gl.clear(gl.COLOR_BUFFER_BIT);
+
+          points.forEach((item) => {
+            setAttribute(gl, "dotPos", item.x, item.y, 0);
+            gl.drawArrays(gl.POINTS, 0, 1);
+          });
+        };
+
+        if (!points.length) _render(x, y);
+
+        render = _render;
+      }
+
+      canvas.addEventListener("click", ({ clientX, clientY }) => {
+        const { left, top, width, height } = canvas.getBoundingClientRect();
+
+        const [clickX, clickY] = [clientX - left, clientY - top];
+
+        const [halfWidth, halfHeight] = [width / 2, height / 2];
+
+        const [posX, posY] = [
+          (clickX - halfWidth) / halfWidth,
+          (halfHeight - clientY) / halfHeight,
+        ];
+
+        render(posX, posY);
+      });
+
+      // 画点要在gl初始化完成后才会生效
+      // gl.drawArrays(gl.POINTS, 0, 1);
+    </script>
+  </body>
+</html>

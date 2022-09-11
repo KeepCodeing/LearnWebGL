@@ -1,0 +1,157 @@
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+
+    <style>
+      * {
+        padding: 0;
+        margin: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="canvas"></canvas>
+    <script>
+      const canvas = document.querySelector("#canvas");
+
+      canvas.height = window.innerHeight;
+      canvas.width = window.innerWidth;
+
+      const gl = canvas.getContext("webgl");
+
+      gl.clearColor(0, 0, 0, 1);
+      gl.clear(gl.COLOR_BUFFER_BIT);
+
+      const points = [];
+
+      const vtSource = `
+        attribute vec4 vtPoint;
+        
+        void main() {
+          gl_PointSize = 40.0;
+          gl_Position = vtPoint;
+        }
+      `;
+
+      // 一定要注意设置精度，不然WebGL程序都没法连接使用
+      const fgSource = `
+        precision mediump float;
+        uniform vec4 fgColor;
+        void main() {
+          gl_FragColor = fgColor;
+        }
+      `;
+
+      function createShader(gl, type, source) {
+        const shader = gl.createShader(type);
+
+        gl.shaderSource(shader, source);
+
+        gl.compileShader(shader);
+
+        return shader;
+      }
+
+      function setVertexShader(gl, key, x, y, z) {
+        const val = gl.getAttribLocation(gl.program, key);
+
+        gl.vertexAttrib3f(val, x, y, z);
+      }
+
+      function setFragmentShader(gl, key, r, g, b, a) {
+        const val = gl.getUniformLocation(gl.program, key);
+
+        gl.uniform4f(val, r, g, b, a);
+      }
+
+      function initWegGL(gl, vtSource, fgSource) {
+        const program = gl.createProgram();
+
+        gl.attachShader(program, createShader(gl, gl.VERTEX_SHADER, vtSource));
+        gl.attachShader(
+          program,
+          createShader(gl, gl.FRAGMENT_SHADER, fgSource)
+        );
+        gl.linkProgram(program);
+        gl.useProgram(program);
+
+        gl.program = program;
+      }
+
+      initWegGL(gl, vtSource, fgSource);
+      setVertexShader(gl, "vtPoint", 0, 0, 0);
+      setFragmentShader(gl, "fgColor", 1, 0, 1, 1);
+
+      // 缓冲区：
+      // 在缓冲区中的内容不会随着异步操作被清空（普通情况下是会被清空重绘的），利用缓冲区
+      // 可以实现和前一节鼠标点击绘制多个点相同的效果，只不过这次顶点着色器的位置信息放在
+      // 了缓冲区区里（虽然程序上的实现还是利用一个points存放所有点的位置信息）。
+      // 缓冲区还有个重要的特点就是里面数据发生改变时我们JS不需要显式的调用重绘，程序会
+      // 自动完成
+
+      // 缓冲区的使用：
+      // 1. 创建缓冲区对象
+      // 2. 将缓冲区对象连接到WebGL中
+      // 3. 向缓冲区中写入数据
+      // 4. 将缓冲区数据指定给attribute
+
+      // attribute使用缓冲区细节：
+      // 我们在指定数据时经常有3f,4f之类的写法，缓冲区也是类似的，它使用
+      // size指明使用多少个数据（类似步长）
+
+      // 一些疑惑：这样做似乎只能存在一个缓冲区？因为没法指定将那个缓冲区给attribute...
+
+      // 创建缓冲区
+      function createShaderBuffer(data) {
+        const buffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data), gl.STATIC_DRAW);
+      }
+
+      createShaderBuffer(points);
+
+      // 向缓冲区中添加数据，因为Float32Array没有数组方法，所以是添加时进行转换
+      function addPoint2Buffer(gl, key, x, y, z) {
+        points.push(x, y);
+
+        gl.bufferData(
+          gl.ARRAY_BUFFER,
+          new Float32Array(points),
+          gl.STATIC_DRAW
+        );
+
+        const val = gl.getAttribLocation(gl.program, key);
+
+        // 指定着色器使用缓存区数据
+        gl.vertexAttribPointer(val, 2, gl.FLOAT, false, 0, 0);
+        // 激活缓冲区？
+        gl.enableVertexAttribArray(val);
+
+        // 重绘，下面就需要指定一次性绘制多少个了
+        gl.clear(gl.COLOR_BUFFER_BIT);
+        gl.drawArrays(gl.POINTS, 0, points.length / 2);
+      }
+
+      canvas.addEventListener("click", ({ clientX, clientY }) => {
+        const { left, top, width, height } = canvas.getBoundingClientRect();
+
+        const [clickX, clickY] = [clientX - left, clientY - top];
+
+        const [halfWidth, halfHeight] = [width / 2, height / 2];
+
+        const [posX, posY] = [
+          (clickX - halfWidth) / halfWidth,
+          (halfHeight - clientY) / halfHeight,
+        ];
+
+        // 每次点击新增一个点
+        addPoint2Buffer(gl, "vtPoint", posX, posY, 0);
+      });
+
+      gl.drawArrays(gl.POINTS, 0, 1);
+    </script>
+  </body>
+</html>
