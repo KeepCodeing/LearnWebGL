@@ -133,6 +133,8 @@
         // 重绘，下面就需要指定一次性绘制多少个了
         gl.clear(gl.COLOR_BUFFER_BIT);
         gl.drawArrays(gl.POINTS, 0, points.length / 2);
+        // 绘制点到点的线
+        gl.drawArrays(gl.LINE_STRIP, 0, points.length / 2);
       }
 
       canvas.addEventListener("click", ({ clientX, clientY }) => {

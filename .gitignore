@@ -23,3 +23,8 @@ pnpm-debug.log*
 *.sw?
 
 .history
+
+three.js
+
+.parcel-cache
+dist
