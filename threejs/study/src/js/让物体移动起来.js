@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import gsap from "gsap";
 import { OrbitControls } from "./OrbitControls";
+import dat from "dat.gui";
 
 const scene = new THREE.Scene();
 
@@ -34,6 +35,38 @@ scene.add(cube);
 camera.position.z = 5;
 controls.update();
 
+const gui = new dat.GUI();
+
+gui.add(cube.position, "x", 0, 10, 0.1).name("X轴移动");
+gui
+  .add(cube.rotation, "y")
+  .min(0)
+  .max(2 * Math.PI)
+  .step(0.1)
+  .name("Y轴旋转");
+
+window.addEventListener("resize", () => {
+  // 更新摄像头
+  camera.aspect = window.innerWidth / window.innerHeight;
+  // 更新摄像机的投影矩阵
+  camera.updateProjectionMatrix();
+
+  // 更新渲染器
+  renderer.setSize(window.innerWidth, window.innerHeight);
+
+  // 设置渲染器的像素比（适配多种分辨率）
+  renderer.setPixelRatio(window.devicePixelRatio);
+});
+
+window.addEventListener("dblclick", () => {
+  const fullScreenEle = document.fullscreenElement;
+
+  // 存在全屏元素，就说明处于全屏状态
+  if (fullScreenEle) document.exitFullscreen();
+  // 否则将canvas设置为全屏
+  renderer.domElement.requestFullscreen();
+});
+
 function animate() {
   // 修改物体x坐标位置
   // cube.position.x += 0.01;
@@ -47,21 +80,21 @@ function animate() {
   // order可以不指定，默认就是xyz
   // cube.rotation.set(Math.PI / 4, 0, 0, "XYZ");
 
-  gsap.to(cube.position, {
-    duration: 2,
-    x: 10,
-    // 无限循环
-    repeat: -1,
-    // 反复进行
-    yoyo: true,
-  });
+  // gsap.to(cube.position, {
+  //   duration: 2,
+  //   x: 10,
+  //   // 无限循环
+  //   repeat: -1,
+  //   // 反复进行
+  //   yoyo: true,
+  // });
 
-  gsap.to(cube.rotation, {
-    duration: 2,
-    x: 2 * Math.PI,
-    repeat: -1,
-    yoyo: true,
-  });
+  // gsap.to(cube.rotation, {
+  //   duration: 2,
+  //   x: 2 * Math.PI,
+  //   repeat: -1,
+  //   yoyo: true,
+  // });
 
   controls.update();
 
